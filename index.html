@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Oratorij Kartoteka</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 10px;
+  }
+  .hidden { display: none; }
+  button {
+    margin: 5px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  #menuPage button {
+    display: block;
+    width: 200px;
+    margin-bottom: 10px;
+    font-size: 18px;
+    text-align: left;
+  }
+  .animator-card {
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  .animator-card svg {
+    width: 24px; height: 24px;
+    margin-right: 10px;
+  }
+  #recordsList details {
+    margin-bottom: 6px;
+  }
+  #recordsList button {
+    margin-top: 2px;
+    font-size: 12px;
+  }
+  label {
+    margin-right: 10px;
+    cursor: pointer;
+  }
+  label input {
+    margin-right: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  table, th, td {
+    border: 1px solid #666;
+  }
+  th, td {
+    padding: 8px;
+    text-align: left;
+    vertical-align: middle;
+  }
+  #addRecordForm {
+    border: 1px solid #666;
+    padding: 10px;
+    border-radius: 8px;
+    width: 300px;
+    background: #f9f9f9;
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.2);
+  }
+  #addRecordForm label {
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+  #addRecordForm input[type=radio] {
+    margin-right: 4px;
+  }
+  #addRecordForm span {
+    margin-right: 12px;
+    font-weight: bold;
+  }
+  #btn-home {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 6px 10px;
+  }
+  input[type=text], input[type=password], textarea {
+    width: 100%;
+    padding: 6px;
+    margin: 6px 0 12px;
+    box-sizing: border-box;
+  }
+  .points-radio-group label {
+    margin-right: 8px;
+    font-weight: normal;
+  }
+  .points-radio-group input {
+    margin-right: 3px;
+  }
+  #bulkCommentForm {
+    margin-top: 10px;
+    border: 1px solid #666;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f4f4f4;
+  }
+  #bulkCommentForm.hidden {
+    display: none;
+  }
+  #bulkCommentForm h4 {
+    margin-top: 0;
+  }
+  .animator-name-link {
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- PRIJAVA -->
+<div id="loginPage">
+  <h2>Prijava</h2>
+  <label>Geslo:
+    <input type="password" id="passwordInput" />
+  </label>
+  <label>Uporabniško ime:
+    <input type="text" id="usernameInput" />
+  </label>
+  <button id="btnLogin">Prijavi se</button>
+  <button id="btnAutoFill">Zapolni si...</button>
+  <p style="color:red;" id="loginError"></p>
+</div>
+
+<!-- MENI -->
+<div id="menuPage" class="hidden">
+  <h2>Meni</h2>
+  <button id="btnKartoteke">📁 Kartoteke</button>
+  <button id="btnTabela">✏️ Tabela - točke</button>
+  <button id="btnNastavitve">⚙️ Nastavitve</button>
+  <button id="btnMasovniVpis">📝 Množični vpis</button>
+</div>
+
+<!-- KARTOTEKE -->
+<div id="kartotekePage" class="hidden">
+  <h2>Kartoteke</h2>
+  <input type="text" id="searchAnimatorInput" placeholder="Išči animatorja..." />
+  <div id="animatorList"></div>
+
+  <div id="animatorDetails" class="hidden">
+    <h3 id="animatorName"></h3>
+    <div id="recordsList"></div>
+    <button id="btnOpenAddRecord">Dodaj vpis</button>
+  </div>
+
+  <form id="addRecordForm" class="hidden">
+    <h4>Vnos novega vpisa</h4>
+    <div><strong>Datum in ura:</strong> <span id="currentDateTime"></span></div>
+    <div id="pointsButtons"></div>
+    <label>Komentar:
+      <textarea id="commentInput" rows="3"></textarea>
+    </label>
+    <button type="submit">Shrani</button>
+    <button type="button" id="btnCancelAddRecord">Prekliči</button>
+  </form>
+</div>
+
+<!-- TABELA -->
+<div id="tabelaPage" class="hidden">
+  <h2>Tabela točk</h2>
+  <table>
+    <thead><tr><th>Animator</th><th>Točke</th></tr></thead>
+    <tbody id="pointsTableBody"></tbody>
+  </table>
+</div>
+
+<!-- NASTAVITVE -->
+<div id="nastavitvePage" class="hidden">
+  <h2>Nastavitve - Animatorji</h2>
+  <form id="addAnimatorForm">
+    <input type="text" id="newAnimatorName" placeholder="Novo ime animatorja" required />
+    <button type="submit">Dodaj animatorja</button>
+  </form>
+  <table>
+    <thead><tr><th>Ime</th><th>Akcija</th></tr></thead>
+    <tbody id="animatorsTableBody"></tbody>
+  </table>
+</div>
+
+<!-- MNOŽIČNI VPIS -->
+<div id="masovniVpisPage" class="hidden">
+  <h2>Množični vpis točk</h2>
+  <form id="bulkPointsForm">
+    <table>
+      <thead>
+        <tr>
+          <th>Animator</th>
+          <th>Točke</th>
+        </tr>
+      </thead>
+      <tbody id="bulkAnimatorsTableBody"></tbody>
+    </table>
+    <div id="bulkCommentForm" class="hidden">
+      <h4>Komentar za: <span id="bulkCommentAnimatorName"></span></h4>
+      <textarea id="bulkCommentInput" rows="3" placeholder="Vnesi komentar (neobvezno)"></textarea>
+      <button type="button" id="bulkCommentCloseBtn">Zapri komentar</button>
+    </div>
+    <button type="submit" style="margin-top:10px;">Shrani vse vpise</button>
+  </form>
+</div>
+
+<button id="btn-home" class="hidden">Domov 🏠</button>
+
+<script>
+(() => {
+  const VALID_USERS = [
+    {username: 'uporabnik', password: 'geslo123'}
+  ];
+  const STORAGE_KEY = 'oratorij_kartoteka_data';
+
+  const loginPage = document.getElementById('loginPage');
+  const menuPage = document.getElementById('menuPage');
+  const kartotekePage = document.getElementById('kartotekePage');
+  const tabelaPage = document.getElementById('tabelaPage');
+  const nastavitvePage = document.getElementById('nastavitvePage');
+  const masovniVpisPage = document.getElementById('masovniVpisPage');
+
+  const passwordInput = document.getElementById('passwordInput');
+  const usernameInput = document.getElementById('usernameInput');
+  const btnLogin = document.getElementById('btnLogin');
+  const btnAutoFill = document.getElementById('btnAutoFill');
+  const loginError = document.getElementById('loginError');
+
+  const btnKartoteke = document.getElementById('btnKartoteke');
+  const btnTabela = document.getElementById('btnTabela');
+  const btnNastavitve = document.getElementById('btnNastavitve');
+  const btnMasovniVpis = document.getElementById('btnMasovniVpis');
+
+  const searchAnimatorInput = document.getElementById('searchAnimatorInput');
+  const animatorListDiv = document.getElementById('animatorList');
+
+  const animatorDetailsDiv = document.getElementById('animatorDetails');
+  const animatorNameH3 = document.getElementById('animatorName');
+  const recordsListDiv = document.getElementById('recordsList');
+  const btnOpenAddRecord = document.getElementById('btnOpenAddRecord');
+
+  const addRecordForm = document.getElementById('addRecordForm');
+  const pointsButtonsDiv = document.getElementById('pointsButtons');
+  const commentInput = document.getElementById('commentInput');
+  const btnCancelAddRecord = document.getElementById('btnCancelAddRecord');
+  const currentDateTimeSpan = document.getElementById('currentDateTime');
+
+  const pointsTableBody = document.getElementById('pointsTableBody');
+
+  const animatorsTableBody = document.getElementById('animatorsTableBody');
+  const addAnimatorForm = document.getElementById('addAnimatorForm');
+  const newAnimatorNameInput = document.getElementById('newAnimatorName');
+
+  const btnHome = document.getElementById('btn-home');
+
+  // Množični vpis elementi
+  const bulkPointsForm = document.getElementById('bulkPointsForm');
+  const bulkAnimatorsTableBody = document.getElementById('bulkAnimatorsTableBody');
+  const bulkCommentForm = document.getElementById('bulkCommentForm');
+  const bulkCommentAnimatorNameSpan = document.getElementById('bulkCommentAnimatorName');
+  const bulkCommentInput = document.getElementById('bulkCommentInput');
+  const bulkCommentCloseBtn = document.getElementById('bulkCommentCloseBtn');
+
+  let data = null;
+  let currentAnimatorId = null;
+
+  // Za bulk komentar
+  let bulkCommentOpenAnimatorId = null;
+
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+  function loadData() {
+    let loaded = localStorage.getItem(STORAGE_KEY);
+    if(loaded){
+      try {
+        data = JSON.parse(loaded);
+      } catch(e) {
+        data = {animators:[]};
+      }
+    } else {
+      data = {animators:[]};
+    }
+  }
+
+  function showPage(page){
+    [loginPage, menuPage, kartotekePage, tabelaPage, nastavitvePage, masovniVpisPage].forEach(p => p.classList.add('hidden'));
+    page.classList.remove('hidden');
+    btnHome.classList.toggle('hidden', page === loginPage || page === menuPage);
+  }
+
+  // Prijava
+  btnLogin.addEventListener('click', () => {
+    loginError.textContent = '';
+    const pass = passwordInput.value.trim();
+    const user = usernameInput.value.trim();
+    if(VALID_USERS.some(u=>u.username === user && u.password === pass)){
+      showPage(menuPage);
+      passwordInput.value = '';
+      usernameInput.value = '';
+      renderAnimatorsTable();
+      renderAnimatorList();
+      renderPointsTable();
+      clearKartotekeView();
+    } else {
+      loginError.textContent = 'Nepravilni podatki.';
+    }
+  });
+
+  btnAutoFill.addEventListener('click', () => {
+    // Samodejni vpis na določen IP bi bil tukaj - ker nimamo IP logike, samo vpišemo podatke
+    passwordInput.value = 'geslo123';
+    usernameInput.value = 'uporabnik';
+  });
+
+  btnKartoteke.addEventListener('click', () => {
+    showPage(kartotekePage);
+    clearKartotekeView();
+    renderAnimatorList();
+  });
+  btnTabela.addEventListener('click', () => {
+    showPage(tabelaPage);
+    renderPointsTable();
+  });
+  btnNastavitve.addEventListener('click', () => {
+    showPage(nastavitvePage);
+    renderAnimatorsTable();
+  });
+  btnMasovniVpis.addEventListener('click', () => {
+    showPage(masovniVpisPage);
+    renderBulkAnimatorsTable();
+    bulkCommentForm.classList.add('hidden');
+    bulkCommentOpenAnimatorId = null;
+  });
+
+  btnHome.addEventListener('click', () => {
+    showPage(menuPage);
+  });
+
+  // --- KARTOTEKE ---
+  function clearKartotekeView(){
+    searchAnimatorInput.value = '';
+    animatorListDiv.innerHTML = '';
+    animatorDetailsDiv.classList.add('hidden');
+    currentAnimatorId = null;
+  }
+
+  function renderAnimatorList(){
+    animatorListDiv.innerHTML = '';
+    const filter = searchAnimatorInput.value.toLowerCase();
+    data.animators.forEach(anim => {
+      if(anim.name.toLowerCase().includes(filter)){
+        const card = document.createElement('div');
+        card.className = 'animator-card';
+        card.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v14h18V7"/>
+            <path d="M3 7l9 6 9-6"/>
+          </svg>
+          ${anim.name}
+        `;
+        card.addEventListener('click', () => {
+          showAnimatorDetails(anim.id);
+        });
+        animatorListDiv.appendChild(card);
+      }
+    });
+  }
+
+  searchAnimatorInput.addEventListener('input', () => {
+    renderAnimatorList();
+  });
+
+  function showAnimatorDetails(animatorId){
+    currentAnimatorId = animatorId;
+    const animator = data.animators.find(a => a.id === animatorId);
+    if(!animator) return;
+    animatorNameH3.textContent = animator.name;
+    recordsListDiv.innerHTML = '';
+
+    if(animator.records.length === 0){
+      recordsListDiv.textContent = 'Ni zapisov.';
+    } else {
+      animator.records.forEach((rec, i) => {
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = `${rec.date} - Točke: ${rec.points} - ${rec.comment.length > 30 ? rec.comment.slice(0,30)+'...' : rec.comment}`;
+        details.appendChild(summary);
+
+        const fullContent = document.createElement('div');
+        fullContent.textContent = `Vsebina: ${rec.comment || '(brez komentarja)'}`;
+        fullContent.style.margin = '4px 0 4px 10px';
+
+        const btnDel = document.createElement('button');
+        btnDel.textContent = 'Izbriši ta vpis';
+        btnDel.addEventListener('click', () => {
+          if(confirm('Res želite izbrisati ta vpis?')){
+            animator.records.splice(i,1);
+            saveData();
+            showAnimatorDetails(animatorId);
+            renderPointsTable();
+            renderBulkAnimatorsTable();
+          }
+        });
+
+        details.appendChild(fullContent);
+        details.appendChild(btnDel);
+
+        recordsListDiv.appendChild(details);
+      });
+    }
+    animatorDetailsDiv.classList.remove('hidden');
+  }
+
+  btnOpenAddRecord.addEventListener('click', () => {
+    addRecordForm.classList.remove('hidden');
+    commentInput.value = '';
+    currentDateTimeSpan.textContent = (new Date()).toLocaleString();
+    // Render točke kot radio gumbi
+    pointsButtonsDiv.innerHTML = '';
+    const pointsVals = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5];
+    pointsVals.forEach(p => {
+      const id = 'pt_' + p.toString().replace('.','_');
+      const label = document.createElement('label');
+      label.htmlFor = id;
+      label.textContent = p;
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'points';
+      input.value = p;
+      input.id = id;
+      label.prepend(input);
+      pointsButtonsDiv.appendChild(label);
+    });
+  });
+
+  btnCancelAddRecord.addEventListener('click', () => {
+    addRecordForm.classList.add('hidden');
+  });
+
+  addRecordForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const pointsVal = addRecordForm.points.value;
+    if(!pointsVal){
+      alert('Izberi točke.');
+      return;
+    }
+    const commentVal = commentInput.value.trim();
+    const animator = data.animators.find(a => a.id === currentAnimatorId);
+    if(!animator) return;
+    animator.records.push({
+      date: (new Date()).toLocaleString(),
+      points: parseFloat(pointsVal),
+      comment: commentVal
+    });
+    saveData();
+    showAnimatorDetails(currentAnimatorId);
+    addRecordForm.classList.add('hidden');
+    renderPointsTable();
+    renderBulkAnimatorsTable();
+  });
+
+  // --- TABELA ---
+  function renderPointsTable(){
+    pointsTableBody.innerHTML = '';
+    // izračun točk po animatorju
+    const summed = data.animators.map(anim => {
+      const totalPoints = anim.records.reduce((a,b) => a+b.points, 0);
+      return {...anim, totalPoints};
+    });
+    // sortiraj od največ do najmanj
+    summed.sort((a,b) => b.totalPoints - a.totalPoints);
+
+    summed.forEach(anim => {
+      const tr = document.createElement('tr');
+      const tdName = document.createElement('td');
+      tdName.textContent = anim.name;
+      const tdPoints = document.createElement('td');
+      tdPoints.textContent = anim.totalPoints.toFixed(1);
+      tr.appendChild(tdName);
+      tr.appendChild(tdPoints);
+      pointsTableBody.appendChild(tr);
+    });
+  }
+
+  // --- NASTAVITVE ---
+  function renderAnimatorsTable(){
+    animatorsTableBody.innerHTML = '';
+    data.animators.forEach(anim => {
+      const tr = document.createElement('tr');
+      const tdName = document.createElement('td');
+      tdName.textContent = anim.name;
+      const tdAction = document.createElement('td');
+      const btnDel = document.createElement('button');
+      btnDel.textContent = 'Izbriši';
+      btnDel.addEventListener('click', () => {
+        if(confirm(`Izbriši animatorja ${anim.name}?`)){
+          data.animators = data.animators.filter(a=>a.id!==anim.id);
+          saveData();
+          renderAnimatorsTable();
+          renderAnimatorList();
+          renderPointsTable();
+          renderBulkAnimatorsTable();
+          if(currentAnimatorId === anim.id){
+            clearKartotekeView();
+          }
+        }
+      });
+      tdAction.appendChild(btnDel);
+      tr.appendChild(tdName);
+      tr.appendChild(tdAction);
+      animatorsTableBody.appendChild(tr);
+    });
+  }
+  addAnimatorForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const newName = newAnimatorNameInput.value.trim();
+    if(!newName) return alert('Vnesi ime animatorja.');
+    // Prevent duplicate names
+    if(data.animators.some(a=>a.name.toLowerCase()===newName.toLowerCase())){
+      alert('Animator s tem imenom že obstaja.');
+      return;
+    }
+    const newAnim = {
+      id: 'id_'+Date.now(),
+      name: newName,
+      records: []
+    };
+    data.animators.push(newAnim);
+    saveData();
+    newAnimatorNameInput.value = '';
+    renderAnimatorsTable();
+    renderAnimatorList();
+    renderPointsTable();
+    renderBulkAnimatorsTable();
+  });
+
+  // --- MNOŽIČNI VPIS ---
+  function renderBulkAnimatorsTable(){
+    bulkAnimatorsTableBody.innerHTML = '';
+    data.animators.forEach(anim => {
+      const tr = document.createElement('tr');
+      const tdName = document.createElement('td');
+      tdName.innerHTML = `<span class="animator-name-link">${anim.name}</span>`;
+      tdName.style.cursor = 'pointer';
+      tdName.addEventListener('click', () => {
+        openBulkComment(anim.id);
+      });
+      tr.appendChild(tdName);
+
+      const tdPoints = document.createElement('td');
+      // Create radio buttons inline for points
+      const pointsVals = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5];
+      pointsVals.forEach(p => {
+        const id = `bulk_pt_${anim.id}_${p.toString().replace('.','_')}`;
+        const label = document.createElement('label');
+        label.style.marginRight = '6px';
+        label.title = p.toString();
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'points_'+anim.id;
+        input.value = p;
+        input.id = id;
+        label.htmlFor = id;
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(p));
+        tdPoints.appendChild(label);
+      });
+      tr.appendChild(tdPoints);
+
+      bulkAnimatorsTableBody.appendChild(tr);
+    });
+  }
+
+  function openBulkComment(animatorId){
+    bulkCommentOpenAnimatorId = animatorId;
+    const animator = data.animators.find(a=>a.id === animatorId);
+    if(!animator) return;
+    bulkCommentAnimatorNameSpan.textContent = animator.name;
+    bulkCommentInput.value = '';
+    bulkCommentForm.classList.remove('hidden');
+    bulkCommentInput.focus();
+  }
+
+  bulkCommentCloseBtn.addEventListener('click', () => {
+    bulkCommentForm.classList.add('hidden');
+    bulkCommentOpenAnimatorId = null;
+  });
+
+  bulkPointsForm.addEventListener('submit', e => {
+    e.preventDefault();
+    // Loop through all animators and check selected points
+    let anyEntry = false;
+    data.animators.forEach(anim => {
+      const selectedPointsInput = bulkPointsForm.querySelector(`input[name="points_${anim.id}"]:checked`);
+      if(selectedPointsInput){
+        anyEntry = true;
+        const pointsVal = parseFloat(selectedPointsInput.value);
+        let commentVal = '';
+        if(bulkCommentOpenAnimatorId === anim.id){
+          commentVal = bulkCommentInput.value.trim();
+        }
+        // add record
+        anim.records.push({
+          date: (new Date()).toLocaleString(),
+          points: pointsVal,
+          comment: commentVal
+        });
+      }
+    });
+    if(!anyEntry){
+      alert('Izberi vsaj ene točke za vsaj enega animatorja.');
+      return;
+    }
+    saveData();
+    alert('Vpisi so bili shranjeni.');
+    bulkCommentForm.classList.add('hidden');
+    bulkCommentOpenAnimatorId = null;
+    bulkCommentInput.value = '';
+    renderPointsTable();
+    renderBulkAnimatorsTable();
+  });
+
+  // --- Inicializacija ---
+  loadData();
+  showPage(loginPage);
+})();
+</script>
+
+</body>
+</html>
